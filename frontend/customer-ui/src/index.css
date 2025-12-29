@@ -1,0 +1,48 @@
+
+/* =============================
+   Tailwind CSS Base Imports
+   ============================= */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =============================
+   Custom Global Styles
+   ============================= */
+/* Set a nice font and background for the whole app */
+
+body {
+  @apply bg-gray-50 font-sans transition-colors duration-300;
+}
+
+.dark body {
+  @apply bg-gray-900 text-white;
+}
+
+/* Dark mode for cards and nav */
+.dark .card {
+  @apply bg-gray-800 text-white;
+}
+.dark header, .dark nav {
+  @apply bg-gray-950 text-white;
+}
+.dark .btn {
+  @apply bg-blue-500 hover:bg-blue-700 text-white;
+}
+
+/* Example: Style for all buttons (can be customized) */
+
+.btn {
+  @apply px-4 py-2 rounded bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2;
+}
+
+.card {
+  @apply bg-white rounded-lg shadow p-4 transition-transform duration-200 ease-in-out hover:-translate-y-1 hover:shadow-xl;
+}
+
+/* Example: Card style for product and info sections */
+.card {
+  @apply bg-white rounded-lg shadow p-4;
+}
+
+/* Add more custom classes below as needed for your template */
