@@ -37,20 +37,47 @@ BEGIN
     SELECT * FROM Users WHERE UserID=@UserID AND IsDeleted=0
 END
 
--- PRODUCTS
-CREATE PROCEDURE CreateProduct
-    @Name NVARCHAR(100), @Description NVARCHAR(255), @Price DECIMAL(18,2), @CategoryID INT, @BrandID INT
+CREATE PROCEDURE GetAllUsers
 AS
 BEGIN
-    INSERT INTO Products (Name, Description, Price, CategoryID, BrandID)
-    VALUES (@Name, @Description, @Price, @CategoryID, @BrandID)
+    SELECT * FROM Users WHERE IsDeleted=0
+END
+
+-- PRODUCTS
+CREATE PROCEDURE CreateProduct
+    @Name NVARCHAR(100), 
+    @Description NVARCHAR(255) = NULL, 
+    @Price DECIMAL(18,2), 
+    @CategoryID INT = NULL, 
+    @BrandID INT = NULL, 
+    @Stock INT = 0,
+    @ImageUrl NVARCHAR(255) = NULL
+AS
+BEGIN
+    INSERT INTO Products (Name, Description, Price, CategoryID, BrandID, Stock, ImageUrl)
+    VALUES (@Name, @Description, @Price, @CategoryID, @BrandID, @Stock, @ImageUrl)
 END
 
 CREATE PROCEDURE UpdateProduct
-    @ProductID INT, @Name NVARCHAR(100), @Description NVARCHAR(255), @Price DECIMAL(18,2), @CategoryID INT, @BrandID INT
+    @ProductID INT, 
+    @Name NVARCHAR(100), 
+    @Description NVARCHAR(255) = NULL, 
+    @Price DECIMAL(18,2), 
+    @CategoryID INT = NULL, 
+    @BrandID INT = NULL, 
+    @Stock INT = 0,
+    @ImageUrl NVARCHAR(255) = NULL
 AS
 BEGIN
-    UPDATE Products SET Name=@Name, Description=@Description, Price=@Price, CategoryID=@CategoryID, BrandID=@BrandID WHERE ProductID=@ProductID
+    UPDATE Products 
+    SET Name=@Name, 
+        Description=@Description, 
+        Price=@Price, 
+        CategoryID=@CategoryID, 
+        BrandID=@BrandID, 
+        Stock=@Stock,
+        ImageUrl=@ImageUrl 
+    WHERE ProductID=@ProductID
 END
 
 CREATE PROCEDURE DeleteProduct
@@ -87,6 +114,22 @@ BEGIN
     SELECT * FROM Categories
 END
 
+CREATE PROCEDURE UpdateCategory
+    @CategoryID INT,
+    @Name NVARCHAR(100)
+AS
+BEGIN
+    UPDATE Categories SET Name=@Name WHERE CategoryID=@CategoryID
+END
+
+CREATE PROCEDURE DeleteCategory
+    @CategoryID INT
+AS
+BEGIN
+    -- Check if products exist in this category before deleting or handle it
+    DELETE FROM Categories WHERE CategoryID=@CategoryID
+END
+
 -- BRANDS
 CREATE PROCEDURE CreateBrand
     @Name NVARCHAR(100)
@@ -99,6 +142,21 @@ CREATE PROCEDURE GetAllBrands
 AS
 BEGIN
     SELECT * FROM Brands
+END
+
+CREATE PROCEDURE UpdateBrand
+    @BrandID INT,
+    @Name NVARCHAR(100)
+AS
+BEGIN
+    UPDATE Brands SET Name=@Name WHERE BrandID=@BrandID
+END
+
+CREATE PROCEDURE DeleteBrand
+    @BrandID INT
+AS
+BEGIN
+    DELETE FROM Brands WHERE BrandID=@BrandID
 END
 
 -- ORDERS
@@ -172,6 +230,25 @@ CREATE PROCEDURE GetAllCoupons
 AS
 BEGIN
     SELECT * FROM Coupons
+END
+
+CREATE PROCEDURE UpdateCoupon
+    @CouponID INT,
+    @Code NVARCHAR(50), 
+    @Discount DECIMAL(5,2), 
+    @ExpiresAt DATETIME
+AS
+BEGIN
+    UPDATE Coupons 
+    SET Code=@Code, Discount=@Discount, ExpiresAt=@ExpiresAt 
+    WHERE CouponID=@CouponID
+END
+
+CREATE PROCEDURE DeleteCoupon
+    @CouponID INT
+AS
+BEGIN
+    DELETE FROM Coupons WHERE CouponID=@CouponID
 END
 
 -- PAYMENTS

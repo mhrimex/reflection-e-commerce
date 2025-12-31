@@ -1,4 +1,7 @@
-const sql = require('mssql');
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const sql = require('mssql/msnodesqlv8');
+export { sql };
 
 
 const config = {

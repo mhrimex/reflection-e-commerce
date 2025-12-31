@@ -23,19 +23,38 @@ export async function fetchUserOrders(token) {
     headers: { 'Authorization': `Bearer ${token}` }
   });
   if (!res.ok) throw new Error('Failed to fetch orders');
-  return res.json();
+  const orders = await res.json();
+  return orders.map(o => ({
+    id: o.OrderID || o.id,
+    total: o.Total || o.total,
+    status: o.Status || o.status,
+    createdAt: o.CreatedAt || o.createdAt
+  }));
 }
 
 export async function fetchCategories() {
   const res = await fetch(`${API_BASE}/categories`);
   if (!res.ok) throw new Error('Failed to fetch categories');
-  return res.json();
+  const categories = await res.json();
+  return categories.map(c => ({
+    id: c.CategoryID || c.id,
+    name: c.Name || c.name
+  }));
 }
 
 export async function fetchProductById(id) {
   const res = await fetch(`${API_BASE}/products/${id}`);
   if (!res.ok) throw new Error('Failed to fetch product');
-  return res.json();
+  const p = await res.json();
+  return {
+    id: p.ProductID || p.id,
+    name: p.Name || p.name,
+    description: p.Description || p.description,
+    price: p.Price !== undefined ? p.Price : p.price,
+    stock: p.Stock || p.stock || 0,
+    categoryId: p.CategoryID || p.categoryId,
+    imageUrl: p.ImageUrl || p.imageUrl
+  };
 }
 export async function fetchUser(token) {
   const res = await fetch(`${API_BASE}/auth/me`, {
@@ -61,12 +80,21 @@ export async function register({ username, password, email, roleId = 2 }) {
 // src/api.js
 // Centralized API utility for customer UI
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 export async function fetchProducts() {
   const res = await fetch(`${API_BASE}/products`);
   if (!res.ok) throw new Error('Failed to fetch products');
-  return res.json();
+  const products = await res.json();
+  return products.map(p => ({
+    id: p.ProductID || p.id,
+    name: p.Name || p.name,
+    description: p.Description || p.description,
+    price: p.Price !== undefined ? p.Price : p.price,
+    stock: p.Stock || p.stock || 0,
+    categoryId: p.CategoryID || p.categoryId,
+    imageUrl: p.ImageUrl || p.imageUrl
+  }));
 }
 
 

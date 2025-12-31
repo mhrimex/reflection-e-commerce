@@ -1,25 +1,15 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import sql from 'mssql';
-
-const dbConfig = {
-  server: 'DEVELOPER8',
-  database: 'ECommerceDB',
-  options: {
-    trustedConnection: true,
-    trustServerCertificate: true,
-    encrypt: false,
-  },
-};
+import { sql, getConnection } from '@/db';
 
 export async function POST(request) {
   const { username, password } = await request.json();
   try {
-    await sql.connect(dbConfig);
-    const result = await sql.query`
-      SELECT * FROM Users WHERE Username=${username} AND IsDeleted=0
-    `;
+    const pool = await getConnection();
+    const result = await pool.request()
+      .input('Username', sql.NVarChar(100), username)
+      .query('SELECT * FROM Users WHERE Username=@Username AND IsDeleted=0');
     const user = result.recordset[0];
     if (!user) {
       return NextResponse.json({ success: false, message: 'User not found.' }, { status: 404 });

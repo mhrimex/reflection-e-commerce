@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { sql, getConnection } from '../../src/db';
+import { sql, getConnection } from '../../../src/db';
 import { middleware } from '../../../middleware/auth';
 
 export async function GET(request) {

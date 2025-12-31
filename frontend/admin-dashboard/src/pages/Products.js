@@ -4,27 +4,53 @@
 
 import { useState, useEffect } from 'react';
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 
 
 export default function Products() {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
-  const [form, setForm] = useState({ name: '', stock: '', price: '' });
+  const [form, setForm] = useState({ name: '', stock: '', price: '', categoryId: '', brandId: '', description: '', imageUrl: '' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch products from backend API
-  const fetchProducts = async () => {
+  // Fetch all data needed
+  const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/products`);
-      if (!res.ok) throw new Error('Failed to fetch products');
-      const data = await res.json();
-      setProducts(Array.isArray(data) ? data : []);
+      const [prodRes, catRes, brandRes] = await Promise.all([
+        fetch(`${API_BASE}/products`),
+        fetch(`${API_BASE}/categories`),
+        fetch(`${API_BASE}/brands`)
+      ]);
+
+      if (!prodRes.ok || !catRes.ok || !brandRes.ok) throw new Error('Failed to fetch data');
+
+      const [prodData, catData, brandData] = await Promise.all([
+        prodRes.json(),
+        catRes.json(),
+        brandRes.json()
+      ]);
+
+      const mappedProducts = Array.isArray(prodData) ? prodData.map(p => ({
+        id: p.ProductID || p.id,
+        name: p.Name || p.name,
+        description: p.Description || p.description || '',
+        stock: p.Stock !== undefined ? p.Stock : (p.stock || 0),
+        price: p.Price !== undefined ? p.Price : (p.price || 0),
+        categoryId: p.CategoryID || p.categoryId || '',
+        brandId: p.BrandID || p.brandId || '',
+        imageUrl: p.ImageUrl || p.imageUrl || ''
+      })) : [];
+
+      setProducts(mappedProducts);
+      setCategories(Array.isArray(catData) ? catData.map(c => ({ id: c.CategoryID || c.id, name: c.Name || c.name })) : []);
+      setBrands(Array.isArray(brandData) ? brandData.map(b => ({ id: b.BrandID || b.id, name: b.Name || b.name })) : []);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -33,13 +59,16 @@ export default function Products() {
   };
 
   useEffect(() => {
-    fetchProducts();
+    fetchData();
   }, []);
 
   // Open modal for add or edit
   const openModal = (product = null) => {
     setEditProduct(product);
-    setForm(product ? { ...product } : { name: '', stock: '', price: '' });
+    setForm(product ?
+      { ...product } :
+      { name: '', stock: '', price: '', categoryId: '', brandId: '', description: '', imageUrl: '' }
+    );
     setModalOpen(true);
   };
 
@@ -47,7 +76,7 @@ export default function Products() {
   const closeModal = () => {
     setModalOpen(false);
     setEditProduct(null);
-    setForm({ name: '', stock: '', price: '' });
+    setForm({ name: '', stock: '', price: '', categoryId: '', brandId: '', description: '', imageUrl: '' });
   };
 
   // Handle form input
@@ -62,16 +91,22 @@ export default function Products() {
     e.preventDefault();
     setError(null);
     try {
+      const payload = {
+        name: form.name,
+        description: form.description,
+        price: Number(form.price),
+        stock: form.stock !== '' ? Number(form.stock) : 0,
+        categoryId: form.categoryId ? Number(form.categoryId) : null,
+        brandId: form.brandId ? Number(form.brandId) : null,
+        imageUrl: form.imageUrl || null
+      };
+
       if (editProduct) {
         // Update product
         const res = await fetch(`${API_BASE}/products/${editProduct.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...form,
-            stock: Number(form.stock),
-            price: Number(form.price),
-          }),
+          body: JSON.stringify(payload),
         });
         if (!res.ok) throw new Error('Failed to update product');
       } else {
@@ -79,15 +114,11 @@ export default function Products() {
         const res = await fetch(`${API_BASE}/products`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: form.name,
-            stock: Number(form.stock),
-            price: Number(form.price),
-          }),
+          body: JSON.stringify(payload),
         });
         if (!res.ok) throw new Error('Failed to add product');
       }
-      await fetchProducts();
+      await fetchData();
       closeModal();
     } catch (e) {
       setError(e.message);
@@ -101,7 +132,7 @@ export default function Products() {
       try {
         const res = await fetch(`${API_BASE}/products/${id}`, { method: 'DELETE' });
         if (!res.ok) throw new Error('Failed to delete product');
-        await fetchProducts();
+        await fetchData();
       } catch (e) {
         setError(e.message);
       }
@@ -123,20 +154,28 @@ export default function Products() {
       <table className="min-w-full bg-white rounded-lg shadow overflow-hidden">
         <thead className="bg-gray-100">
           <tr>
+            <th className="py-3 px-4 text-left font-semibold text-gray-700">Img</th>
             <th className="py-3 px-4 text-left font-semibold text-gray-700">ID</th>
             <th className="py-3 px-4 text-left font-semibold text-gray-700">Name</th>
             <th className="py-3 px-4 text-left font-semibold text-gray-700">Stock</th>
             <th className="py-3 px-4 text-left font-semibold text-gray-700">Price</th>
-            <th className="py-3 px-4" colSpan={2}></th>
+            <th className="py-3 px-4"></th>
           </tr>
         </thead>
         <tbody>
           {products.map(product => (
             <tr key={product.id} className="border-b hover:bg-gray-50">
+              <td className="py-3 px-4">
+                {product.imageUrl ? (
+                  <img src={product.imageUrl} alt={product.name} className="w-10 h-10 object-cover rounded shadow-sm" />
+                ) : (
+                  <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-400">No Img</div>
+                )}
+              </td>
               <td className="py-3 px-4">{product.id}</td>
               <td className="py-3 px-4">{product.name}</td>
-              <td className="py-3 px-4">{product.stock}</td>
-              <td className="py-3 px-4">${product.price.toFixed(2)}</td>
+              <td className="py-3 px-4 font-semibold text-blue-600">{product.stock}</td>
+              <td className="py-3 px-4 font-semibold">${product.price.toFixed(2)}</td>
               <td className="py-3 px-4 text-right">
                 <button
                   className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition mr-2"
@@ -155,7 +194,7 @@ export default function Products() {
       {/* Modal for Add/Edit */}
       {modalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
-          <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md relative">
+          <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md relative max-h-[90vh] overflow-y-auto">
             <button
               className="absolute top-2 right-2 text-gray-400 hover:text-gray-700"
               onClick={closeModal}
@@ -165,44 +204,91 @@ export default function Products() {
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block mb-1 font-medium">Name</label>
+                <label className="block mb-1 font-medium text-sm text-gray-600">Name</label>
                 <input
                   type="text"
                   name="name"
                   value={form.name}
                   onChange={handleChange}
-                  className="w-full border rounded px-3 py-2"
+                  className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                   required
                 />
               </div>
               <div>
-                <label className="block mb-1 font-medium">Stock</label>
-                <input
-                  type="number"
-                  name="stock"
-                  value={form.stock}
+                <label className="block mb-1 font-medium text-sm text-gray-600">Description</label>
+                <textarea
+                  name="description"
+                  value={form.description}
                   onChange={handleChange}
-                  className="w-full border rounded px-3 py-2"
-                  required
-                  min="0"
+                  className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                  rows="2"
                 />
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block mb-1 font-medium text-sm text-gray-600">Stock</label>
+                  <input
+                    type="number"
+                    name="stock"
+                    value={form.stock}
+                    onChange={handleChange}
+                    className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                    required
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 font-medium text-sm text-gray-600">Price</label>
+                  <input
+                    type="number"
+                    name="price"
+                    value={form.price}
+                    onChange={handleChange}
+                    className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                    required
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+              </div>
               <div>
-                <label className="block mb-1 font-medium">Price</label>
-                <input
-                  type="number"
-                  name="price"
-                  value={form.price}
+                <label className="block mb-1 font-medium text-sm text-gray-600">Category (Optional)</label>
+                <select
+                  name="categoryId"
+                  value={form.categoryId}
                   onChange={handleChange}
-                  className="w-full border rounded px-3 py-2"
-                  required
-                  min="0"
-                  step="0.01"
+                  className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                >
+                  <option value="">Select Category</option>
+                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block mb-1 font-medium text-sm text-gray-600">Brand (Optional)</label>
+                <select
+                  name="brandId"
+                  value={form.brandId}
+                  onChange={handleChange}
+                  className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                >
+                  <option value="">Select Brand</option>
+                  {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block mb-1 font-medium text-sm text-gray-600">Image URL (Optional)</label>
+                <input
+                  type="text"
+                  name="imageUrl"
+                  value={form.imageUrl}
+                  onChange={handleChange}
+                  placeholder="https://example.com/image.jpg"
+                  className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
               <button
                 type="submit"
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition w-full"
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition w-full font-bold shadow-sm"
               >
                 {editProduct ? 'Update' : 'Add'} Product
               </button>

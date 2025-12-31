@@ -1,0 +1,15 @@
+{
+    "ports": {
+        "backend": 5000,
+        "admin": 3001,
+        "customer": 3000
+    },
+    "database": {
+        "server": "localhost",
+        "name": "ECommerceDB",
+        "options": {
+            "trustedConnection": true,
+            "trustServerCertificate": true
+        }
+    }
+}

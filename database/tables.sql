@@ -24,6 +24,8 @@ CREATE TABLE Products (
     Price DECIMAL(18,2) NOT NULL,
     CategoryID INT,
     BrandID INT,
+    Stock INT DEFAULT 0,
+    ImageUrl NVARCHAR(255),
     CreatedAt DATETIME DEFAULT GETDATE(),
     IsDeleted BIT DEFAULT 0,
     FOREIGN KEY (CategoryID) REFERENCES Categories(CategoryID),

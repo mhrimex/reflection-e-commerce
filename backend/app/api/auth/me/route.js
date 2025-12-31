@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
-import { sql, getConnection } from '../../../src/db';
+import { sql, getConnection } from '../../../../src/db';
 
 export async function GET(request) {
   const auth = request.headers.get('authorization');
