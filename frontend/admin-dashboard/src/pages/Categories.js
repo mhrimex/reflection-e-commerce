@@ -8,8 +8,10 @@ export default function Categories() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [name, setName] = useState('');
+  const [icon, setIcon] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
+  const [editIcon, setEditIcon] = useState('');
 
   useEffect(() => {
     loadCategories();
@@ -33,8 +35,9 @@ export default function Categories() {
     if (!name.trim()) return;
     setLoading(true);
     try {
-      await createCategory({ name });
+      await createCategory({ name, icon });
       setName('');
+      setIcon('');
       await loadCategories();
     } catch (err) {
       setError('Failed to create category');
@@ -47,7 +50,7 @@ export default function Categories() {
     if (!editName.trim()) return;
     setLoading(true);
     try {
-      await updateCategory(id, { name: editName });
+      await updateCategory(id, { name: editName, icon: editIcon });
       setEditingId(null);
       await loadCategories();
     } catch (err) {
@@ -71,7 +74,7 @@ export default function Categories() {
   };
 
   return (
-    <main className="p-8 max-w-6xl mx-auto animate-in fade-in duration-500">
+    <main className="max-w-6xl mx-auto animate-in fade-in duration-500">
       <div className="flex justify-between items-center mb-10">
         <div>
           <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">Manage Categories</h1>
@@ -88,16 +91,28 @@ export default function Categories() {
               New Category
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2 ml-1">Category Name</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  placeholder="e.g. Electronics"
-                  className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-slate-900 placeholder-slate-400 ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-500 transition-all outline-none"
-                  required
-                />
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2 ml-1">Category Name</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    placeholder="e.g. Electronics"
+                    className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-slate-900 placeholder-slate-400 ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2 ml-1">Icon (Emoji)</label>
+                  <input
+                    type="text"
+                    value={icon}
+                    onChange={e => setIcon(e.target.value)}
+                    placeholder="e.g. 💻"
+                    className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 text-slate-900 placeholder-slate-400 ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                  />
+                </div>
               </div>
               <button
                 type="submit"
@@ -138,17 +153,26 @@ export default function Categories() {
                       <tr key={cat.id} className="group hover:bg-blue-50/30 transition-colors">
                         <td className="py-6 px-8">
                           {editingId === cat.id ? (
-                            <input
-                              type="text"
-                              value={editName}
-                              onChange={e => setEditName(e.target.value)}
-                              className="bg-white ring-1 ring-blue-200 rounded-xl px-4 py-2 text-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
-                              autoFocus
-                            />
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={editIcon}
+                                onChange={e => setEditIcon(e.target.value)}
+                                className="w-16 bg-white ring-1 ring-blue-200 rounded-xl px-4 py-2 text-slate-900 outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                                placeholder="Icon"
+                              />
+                              <input
+                                type="text"
+                                value={editName}
+                                onChange={e => setEditName(e.target.value)}
+                                className="bg-white ring-1 ring-blue-200 rounded-xl px-4 py-2 text-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
+                                autoFocus
+                              />
+                            </div>
                           ) : (
                             <div className="flex items-center gap-4">
-                              <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xs ring-1 ring-slate-200 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                                {cat.name.charAt(0).toUpperCase()}
+                              <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xl ring-1 ring-slate-200 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                {cat.icon || cat.name.charAt(0).toUpperCase()}
                               </div>
                               <span className="font-bold text-slate-900 text-lg">{cat.name}</span>
                             </div>
@@ -173,6 +197,7 @@ export default function Categories() {
                                   onClick={() => {
                                     setEditingId(cat.id);
                                     setEditName(cat.name);
+                                    setEditIcon(cat.icon || '');
                                   }}
                                   className="p-3 text-slate-400 hover:text-blue-600 hover:bg-white rounded-2xl transition shadow-sm hover:shadow-md ring-1 ring-slate-200"
                                 >Edit</button>

@@ -5,12 +5,13 @@ import { middleware } from '~/middleware/auth';
 export async function PUT(request, { params }) {
     // await middleware(request);
     const { id } = await params;
-    const { name } = await request.json();
+    const { name, icon } = await request.json();
     try {
         const pool = await getConnection();
         await pool.request()
             .input('CategoryID', sql.Int, id)
             .input('Name', sql.NVarChar(100), name)
+            .input('Icon', sql.NVarChar(100), icon || null)
             .execute('UpdateCategory');
         return NextResponse.json({ success: true });
     } catch (error) {

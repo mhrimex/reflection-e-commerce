@@ -64,7 +64,7 @@ export default function Dashboard() {
   if (!isAdmin) return null;
 
   return (
-    <main className="p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-5 duration-700">
+    <main className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-5 duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-16">
         <div>
           <h1 className="text-6xl font-black text-slate-900 tracking-tighter mb-4">

@@ -22,9 +22,10 @@ import About from './pages/About';
 
 
 
-// Navbar component for site-wide navigation, styled with Tailwind CSS
+import { useState } from 'react';
 
 function Navbar() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -83,13 +84,44 @@ function Navbar() {
             </svg>
             <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full border border-white"></span>
           </Link>
-          <button className="text-slate-600">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-            </svg>
+          <button
+            className="text-slate-600 p-2 hover:bg-slate-100 rounded-xl transition-colors"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            {isMenuOpen ? (
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              </svg>
+            )}
           </button>
         </div>
       </nav>
+
+      {/* Mobile Menu Overlay */}
+      {isMenuOpen && (
+        <div className="md:hidden border-t border-slate-100 bg-white animate-in slide-in-from-top duration-300">
+          <div className="px-4 py-6 space-y-4">
+            <Link to="/products" className="block text-lg font-bold text-slate-900" onClick={() => setIsMenuOpen(false)}>Products</Link>
+            <Link to="/categories" className="block text-lg font-bold text-slate-900" onClick={() => setIsMenuOpen(false)}>Categories</Link>
+            <Link to="/about" className="block text-lg font-bold text-slate-900" onClick={() => setIsMenuOpen(false)}>About</Link>
+            <Link to="/contact" className="block text-lg font-bold text-slate-900" onClick={() => setIsMenuOpen(false)}>Contact</Link>
+            <div className="pt-4 border-t border-slate-50 flex items-center gap-4">
+              <Link to="/profile" className="flex items-center gap-3 text-slate-600 font-bold" onClick={() => setIsMenuOpen(false)}>
+                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">👤</div>
+                Profile
+              </Link>
+              <Link to="/wishlist" className="flex items-center gap-3 text-slate-600 font-bold" onClick={() => setIsMenuOpen(false)}>
+                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">❤️</div>
+                Wishlist
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

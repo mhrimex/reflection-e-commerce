@@ -102,10 +102,11 @@ END
 
 -- CATEGORIES
 CREATE PROCEDURE CreateCategory
-    @Name NVARCHAR(100)
+    @Name NVARCHAR(100),
+    @Icon NVARCHAR(100) = NULL
 AS
 BEGIN
-    INSERT INTO Categories (Name) VALUES (@Name)
+    INSERT INTO Categories (Name, Icon) VALUES (@Name, @Icon)
 END
 
 CREATE PROCEDURE GetAllCategories
@@ -116,10 +117,11 @@ END
 
 CREATE PROCEDURE UpdateCategory
     @CategoryID INT,
-    @Name NVARCHAR(100)
+    @Name NVARCHAR(100),
+    @Icon NVARCHAR(100) = NULL
 AS
 BEGIN
-    UPDATE Categories SET Name=@Name WHERE CategoryID=@CategoryID
+    UPDATE Categories SET Name=@Name, Icon=@Icon WHERE CategoryID=@CategoryID
 END
 
 CREATE PROCEDURE DeleteCategory
@@ -274,4 +276,114 @@ BEGIN
     SELECT * FROM Products WHERE Name LIKE '%' + @Search + '%'
     ORDER BY ProductID
     OFFSET (@Page-1)*@PageSize ROWS FETCH NEXT @PageSize ROWS ONLY
+END
+
+-- REPORTS
+CREATE PROCEDURE GetReportStats
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Basic Metrics
+    DECLARE @TotalRevenue DECIMAL(18,2);
+    DECLARE @TotalOrders INT;
+    DECLARE @TotalUsers INT;
+    DECLARE @TotalProducts INT;
+
+    SELECT @TotalRevenue = SUM(Total) FROM Orders;
+    SELECT @TotalOrders = COUNT(*) FROM Orders;
+    SELECT @TotalUsers = COUNT(*) FROM Users WHERE IsDeleted = 0;
+    SELECT @TotalProducts = COUNT(*) FROM Products WHERE IsDeleted = 0;
+
+    -- Result Set 1: Overall Metrics
+    SELECT 
+        ISNULL(@TotalRevenue, 0) AS TotalRevenue,
+        ISNULL(@TotalOrders, 0) AS TotalOrders,
+        ISNULL(@TotalUsers, 0) AS TotalUsers,
+        ISNULL(@TotalProducts, 0) AS TotalProducts;
+
+    -- Result Set 2: Recent Activity
+    SELECT TOP 5 
+        o.OrderID, 
+        u.Username, 
+        o.Total, 
+        o.Status, 
+        o.CreatedAt
+    FROM Orders o
+    INNER JOIN Users u ON o.UserID = u.UserID
+    ORDER BY o.CreatedAt DESC;
+END
+
+-- STOCK REPORT
+CREATE PROCEDURE GetStockReport
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Overall Stock Metrics
+    SELECT 
+        COUNT(*) AS TotalProductSKUs,
+        SUM(Stock) AS TotalStockUnits,
+        SUM(Stock * Price) AS TotalInventoryValue,
+        COUNT(CASE WHEN Stock <= 10 THEN 1 END) AS LowStockAlerts
+    FROM Products 
+    WHERE IsDeleted = 0;
+
+    -- Full Stock List (Showing all products for "Variation")
+    SELECT 
+        ProductID, 
+        Name, 
+        Stock, 
+        Price, 
+        (Stock * Price) AS PositionValue
+    FROM Products 
+    WHERE IsDeleted = 0
+    ORDER BY Stock ASC;
+
+    -- Stock By Category
+    SELECT 
+        c.Name AS CategoryName, 
+        SUM(p.Stock) AS TotalUnits, 
+        SUM(p.Stock * p.Price) AS CategoryValue
+    FROM Products p
+    JOIN Categories c ON p.CategoryID = c.CategoryID
+    WHERE p.IsDeleted = 0
+    GROUP BY c.Name;
+END
+
+-- SALES PERFORMANCE REPORT
+CREATE PROCEDURE GetSalesReport
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Top Selling Products
+    SELECT TOP 10
+        p.Name,
+        SUM(oi.Quantity) AS UnitsSold,
+        SUM(oi.Quantity * oi.Price) AS TotalRevenue
+    FROM OrderItems oi
+    INNER JOIN Products p ON oi.ProductID = p.ProductID
+    GROUP BY p.Name
+    ORDER BY TotalRevenue DESC;
+
+    -- Revenue By Category
+    SELECT 
+        c.Name AS CategoryName,
+        SUM(oi.Quantity * oi.Price) AS Revenue
+    FROM OrderItems oi
+    INNER JOIN Products p ON oi.ProductID = p.ProductID
+    INNER JOIN Categories c ON p.CategoryID = c.CategoryID
+    GROUP BY c.Name
+    ORDER BY Revenue DESC;
+
+    -- Revenue Growth (Last 7 Days)
+    SELECT 
+        CAST(CreatedAt AS DATE) AS SalesDate,
+        SUM(Total) AS DailyRevenue,
+        COUNT(*) AS OrderCount
+    FROM Orders
+    WHERE CreatedAt >= DATEADD(day, -7, GETDATE())
+    GROUP BY CAST(CreatedAt AS DATE)
+    ORDER BY SalesDate ASC;
 END

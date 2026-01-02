@@ -15,15 +15,16 @@ export async function GET() {
 }
 
 export async function POST(request) {
-  await middleware(request);
-  const { name } = await request.json();
   try {
+    const { name, icon } = await request.json();
     const pool = await getConnection();
     await pool.request()
       .input('Name', sql.NVarChar(100), name)
+      .input('Icon', sql.NVarChar(100), icon || null)
       .execute('CreateCategory');
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error('API Error in Categories POST:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

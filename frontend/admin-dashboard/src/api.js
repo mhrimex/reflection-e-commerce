@@ -85,7 +85,8 @@ export async function fetchCategories() {
   const categories = await res.json();
   return categories.map(c => ({
     id: c.CategoryID || c.id,
-    name: c.Name || c.name
+    name: c.Name || c.name,
+    icon: c.Icon || c.icon
   }));
 }
 
@@ -284,3 +285,8 @@ export async function deleteUser(id) {
   return res.json();
 }
 
+export async function fetchReports(type = 'overview') {
+  const res = await fetch(`${API_BASE}/reports/${type}`);
+  if (!res.ok) throw new Error('Failed to fetch reports');
+  return res.json();
+}

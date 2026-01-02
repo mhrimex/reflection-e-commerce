@@ -111,7 +111,7 @@ export default function Users() {
   if (!isAdmin) return null;
 
   return (
-    <main className="p-8 max-w-7xl mx-auto animate-in fade-in duration-700">
+    <main className="max-w-7xl mx-auto animate-in fade-in duration-700">
       <div className="flex justify-between items-center mb-10">
         <div>
           <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">User Management</h1>

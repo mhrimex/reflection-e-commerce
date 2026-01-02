@@ -1,15 +1,24 @@
 
 // Products.js - Professional Product Catalog
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { fetchProducts, fetchCategories } from '../api';
 
 export default function Products() {
+  const [searchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '');
   const [sort, setSort] = useState('');
+
+  useEffect(() => {
+    const categoryId = searchParams.get('category');
+    if (categoryId) {
+      setSelectedCategory(categoryId);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     setLoading(true);
