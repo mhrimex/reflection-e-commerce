@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
 
 import { sql, getConnection } from '../../../src/db';
 import { middleware } from '../../../middleware/auth';

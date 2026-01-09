@@ -1,7 +1,7 @@
 
 // Cart API
 export async function fetchCart(token) {
-  const res = await fetch(`${API_BASE}/cart`, {
+  const res = await fetch(`${API_BASE}/cart?_t=${Date.now()}`, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
   if (!res.ok) throw new Error('Failed to fetch cart');
@@ -10,7 +10,7 @@ export async function fetchCart(token) {
 
 // Wishlist API
 export async function fetchWishlist(token) {
-  const res = await fetch(`${API_BASE}/wishlist`, {
+  const res = await fetch(`${API_BASE}/wishlist?_t=${Date.now()}`, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
   if (!res.ok) throw new Error('Failed to fetch wishlist');
@@ -19,7 +19,7 @@ export async function fetchWishlist(token) {
 
 // Order History API
 export async function fetchUserOrders(token) {
-  const res = await fetch(`${API_BASE}/orders`, {
+  const res = await fetch(`${API_BASE}/orders?_t=${Date.now()}`, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
   if (!res.ok) throw new Error('Failed to fetch orders');
@@ -33,7 +33,7 @@ export async function fetchUserOrders(token) {
 }
 
 export async function fetchCategories() {
-  const res = await fetch(`${API_BASE}/categories`);
+  const res = await fetch(`${API_BASE}/categories?_t=${Date.now()}`);
   if (!res.ok) throw new Error('Failed to fetch categories');
   const categories = await res.json();
   return categories.map(c => ({
@@ -43,7 +43,7 @@ export async function fetchCategories() {
 }
 
 export async function fetchProductById(id) {
-  const res = await fetch(`${API_BASE}/products/${id}`);
+  const res = await fetch(`${API_BASE}/products/${id}?_t=${Date.now()}`);
   if (!res.ok) throw new Error('Failed to fetch product');
   const p = await res.json();
   return {
@@ -83,7 +83,7 @@ export async function register({ username, password, email, roleId = 2 }) {
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 export async function fetchProducts() {
-  const res = await fetch(`${API_BASE}/products`);
+  const res = await fetch(`${API_BASE}/products?_t=${Date.now()}`);
   if (!res.ok) throw new Error('Failed to fetch products');
   const products = await res.json();
   return products.map(p => ({
@@ -107,6 +107,22 @@ export async function login({ username, password }) {
   if (!res.ok) {
     const error = await res.json();
     throw new Error(error.message || 'Login failed');
+  }
+  return res.json();
+}
+
+export async function submitOrder(token, orderData) {
+  const res = await fetch(`${API_BASE}/orders`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(orderData)
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Order submission failed');
   }
   return res.json();
 }

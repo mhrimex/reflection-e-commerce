@@ -4,12 +4,22 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import { fetchReports } from '../api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function Reports() {
   const [reportType, setReportType] = useState('overview');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [error, setError] = useState(null);
+
+  const [filters, setFilters] = useState({
+    categoryId: '',
+    startDate: '',
+    endDate: ''
+  });
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -19,26 +29,110 @@ export default function Reports() {
       const decoded = jwtDecode(token);
       if (Number(decoded.roleId) === 1) {
         setIsAdmin(true);
-        loadReport(reportType);
       } else { navigate('/login'); }
     } catch (err) { navigate('/login'); }
-  }, [navigate, reportType]);
+  }, [navigate]);
 
-  async function loadReport(type) {
+  // Load report whenever type OR filters change
+  useEffect(() => {
+    if (isAdmin) {
+      loadReport(reportType, filters);
+    }
+  }, [reportType, filters, isAdmin]);
+
+  async function loadReport(type, currentFilters) {
     setLoading(true);
-    setData(null); // Clear stale data to prevent race condition crashes
+    setError(null);
+    setData(null);
     try {
-      const result = await fetchReports(type);
+      const result = await fetchReports(type, currentFilters);
       setData(result);
     } catch (e) {
       console.error('Reports: Load failed', e);
+      setError("Failed to load report. Backend connection issue or invalid data.");
     } finally {
       setLoading(false);
     }
   }
 
+  const handleGeneratePDF = () => {
+    if (!data) return;
+
+    const doc = new jsPDF();
+    const dateStr = new Date().toLocaleDateString();
+
+    // -- Header --
+    doc.setFontSize(22);
+    doc.setTextColor(40);
+    doc.text("Reflection E-Commerce", 14, 20);
+
+    doc.setFontSize(12);
+    doc.setTextColor(100);
+    doc.text(`Official ${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report`, 14, 30);
+    doc.text(`Generated: ${dateStr}`, 14, 36);
+
+    doc.setDrawColor(200);
+    doc.line(14, 40, 196, 40); // Horizontal line
+
+    // -- Data Preparation --
+    let head = [];
+    let body = [];
+
+    if (reportType === 'overview' && data.recentOrders) {
+      head = [["ID", "User", "Total", "Status", "Date"]];
+      body = data.recentOrders.map(o => [
+        o.OrderID,
+        o.Username,
+        `$${Number(o.Total).toFixed(2)}`,
+        o.Status,
+        new Date(o.CreatedAt).toLocaleDateString()
+      ]);
+      doc.text("Recent Activity Summary", 14, 50);
+    }
+    else if (reportType === 'stock' && data.lowStock) {
+      head = [["Item", "Stock", "Price", "Value"]];
+      body = data.lowStock.map(p => [
+        p.Name,
+        p.Stock,
+        `$${Number(p.Price).toFixed(2)}`,
+        `$${Number(p.PositionValue).toLocaleString()}`
+      ]);
+      doc.text("Low Stock / Inventory Risk", 14, 50);
+    }
+    else if (reportType === 'sales' && data.topProducts) {
+      head = [["Product", "Units Sold", "Revenue"]];
+      body = data.topProducts.map(p => [
+        p.Name,
+        p.UnitsSold,
+        `$${Number(p.TotalRevenue).toLocaleString()}`
+      ]);
+      doc.text("Top Performance Metrics", 14, 50);
+    }
+
+    // -- Table --
+    autoTable(doc, {
+      startY: 55,
+      head: head,
+      body: body,
+      theme: 'grid',
+      headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold' },
+      styles: { fontSize: 10, cellPadding: 3 },
+    });
+
+    // -- Footer --
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text(`Page ${i} of ${pageCount}`, 196, 285, { align: 'right' });
+      doc.text("Confidential Internal Document", 14, 285);
+    }
+
+    doc.save(`Report_${reportType}_${Date.now()}.pdf`);
+  };
+
   const handleExport = () => {
-    // Safety check: Don't export if data is missing or doesn't match report type
     if (!data) {
       alert("Intelligence data not synchronized. Please wait.");
       return;
@@ -86,7 +180,7 @@ export default function Reports() {
 
   return (
     <main className="max-w-7xl mx-auto animate-in fade-in duration-700">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 mb-16">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 mb-16">
         <div>
           <h1 className="text-5xl font-black text-slate-900 tracking-tighter">Market <span className="text-blue-600">Intelligence</span></h1>
           <div className="flex items-center gap-4 mt-4">
@@ -101,17 +195,48 @@ export default function Reports() {
             ))}
           </div>
         </div>
-        <button
-          onClick={handleExport}
-          className="bg-[#0f172a] text-white px-10 py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest hover:bg-blue-600 transition-all shadow-2xl shadow-slate-900/20 flex items-center gap-3 active:scale-95"
-        >
-          <span>📥</span> Export {reportType.toUpperCase()}
-        </button>
+
+        <div className="flex flex-col md:flex-row items-center gap-4 w-full xl:w-auto print:hidden">
+          {reportType !== 'overview' && (
+            <FilterBar filters={filters} setFilters={setFilters} reportType={reportType} />
+          )}
+          <button
+            onClick={handleGeneratePDF}
+            className="w-full md:w-auto bg-white text-slate-900 border border-slate-200 px-10 py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm flex items-center justify-center gap-3 active:scale-95"
+          >
+            <span>📄</span> Download PDF
+          </button>
+          <button
+            onClick={handleExport}
+            className="w-full md:w-auto bg-[#0f172a] text-white px-10 py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest hover:bg-blue-600 transition-all shadow-2xl shadow-slate-900/20 flex items-center justify-center gap-3 active:scale-95"
+          >
+            <span>📥</span> CSV
+          </button>
+        </div>
       </div>
+
+      <style>{`
+        @media print {
+            body { background: white; -webkit-print-color-adjust: exact; }
+            .print\\:hidden, nav, header { display: none !important; }
+            main { padding: 0 !important; margin: 0 !important; }
+            h1 { font-size: 24pt !important; margin-bottom: 20px !important; }
+            .shadow-2xl, .shadow-3xl, .shadow-4xl { box-shadow: none !important; border: 1px solid #ddd !important; }
+            .rounded-\\[3rem\\], .rounded-\\[2\\.5rem\\] { border-radius: 0 !important; }
+            table { width: 100% !important; border-collapse: collapse !important; }
+            th, td { padding: 8px !important; border-bottom: 1px solid #eee !important; }
+        }
+      `}</style>
 
       {loading ? (
         <div className="flex items-center justify-center min-h-[40vh]">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      ) : error ? (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-2xl flex items-center justify-center min-h-[20vh]">
+          <span className="font-bold flex items-center gap-2">
+            <span>⚠️</span> {error}
+          </span>
         </div>
       ) : (
         <>
@@ -124,8 +249,58 @@ export default function Reports() {
   );
 }
 
+function FilterBar({ filters, setFilters, reportType }) {
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    // Fetch categories for the dropdown
+    import('../api').then(api => {
+      api.fetchCategories().then(setCategories).catch(console.error);
+    });
+  }, []);
+
+  const handleChange = (e) => {
+    setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  return (
+    <div className="flex flex-col md:flex-row gap-4 bg-white p-2 rounded-[2rem] border border-slate-100 shadow-sm w-full">
+      <select
+        name="categoryId"
+        value={filters.categoryId}
+        onChange={handleChange}
+        className="px-6 py-3 rounded-[1.5rem] bg-slate-50 border-none text-xs font-bold text-slate-600 uppercase tracking-wide focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
+      >
+        <option value="">All Categories</option>
+        {categories.map(c => (
+          <option key={c.id} value={c.id}>{c.name}</option>
+        ))}
+      </select>
+
+      {reportType === 'sales' && (
+        <>
+          <input
+            type="date"
+            name="startDate"
+            value={filters.startDate}
+            onChange={handleChange}
+            className="px-6 py-3 rounded-[1.5rem] bg-slate-50 border-none text-xs font-bold text-slate-600 uppercase tracking-wide focus:ring-2 focus:ring-blue-500 outline-none"
+          />
+          <input
+            type="date"
+            name="endDate"
+            value={filters.endDate}
+            onChange={handleChange}
+            className="px-6 py-3 rounded-[1.5rem] bg-slate-50 border-none text-xs font-bold text-slate-600 uppercase tracking-wide focus:ring-2 focus:ring-blue-500 outline-none"
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
 function OverviewModule({ data }) {
-  const { metrics, recentOrders } = data;
+  const { metrics = {}, recentOrders = [] } = data || {};
   return (
     <div className="space-y-16">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -139,7 +314,7 @@ function OverviewModule({ data }) {
 }
 
 function StockModule({ data }) {
-  const { metrics, lowStock, byCategory } = data;
+  const { metrics = {}, lowStock = [], byCategory = [] } = data || {};
   return (
     <div className="space-y-16">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -196,7 +371,7 @@ function StockModule({ data }) {
 }
 
 function SalesModule({ data }) {
-  const { topProducts, byCategory } = data;
+  const { topProducts = [], byCategory = [] } = data || {};
   return (
     <div className="space-y-16">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

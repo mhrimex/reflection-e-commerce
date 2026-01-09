@@ -1,28 +1,49 @@
 
 import { NextResponse } from 'next/server';
-import { getConnection } from '@/db';
+export const dynamic = 'force-dynamic';
+import { getConnection, sql } from '@/db';
 
 export async function GET(request, { params }) {
     let resolvedType = 'unknown';
     try {
         const p = await params;
         resolvedType = p.type;
-        console.log(`[REPORTS] Request received for type: ${resolvedType}`);
+        const { searchParams } = request.nextUrl;
+        const categoryId = searchParams.get('categoryId');
+        const startDate = searchParams.get('startDate');
+        const endDate = searchParams.get('endDate');
+
+        console.log(`[REPORTS] Request received - Type: ${resolvedType}, Category: ${categoryId}, Date: ${startDate} to ${endDate}`);
 
         const pool = await getConnection();
 
         let procedureName = '';
+        let req = pool.request();
+
+        // Helper to add input if value exists
+        const addInt = (name, val) => { if (val) req.input(name, sql.Int, val); };
+        const addDate = (name, val) => { if (val) req.input(name, sql.Date, val); };
+
         switch (resolvedType) {
-            case 'overview': procedureName = 'GetReportStats'; break;
-            case 'stock': procedureName = 'GetStockReport'; break;
-            case 'sales': procedureName = 'GetSalesReport'; break;
+            case 'overview':
+                procedureName = 'GetReportStats';
+                break;
+            case 'stock':
+                procedureName = 'GetStockReport';
+                addInt('CategoryID', categoryId);
+                break;
+            case 'sales':
+                procedureName = 'GetSalesReport';
+                addInt('CategoryID', categoryId);
+                addDate('StartDate', startDate);
+                addDate('EndDate', endDate);
+                break;
             default:
-                console.warn(`[REPORTS] Invalid type requested: ${resolvedType}`);
                 return NextResponse.json({ error: 'Invalid report type' }, { status: 400 });
         }
 
         console.log(`[REPORTS] Executing SP: ${procedureName}`);
-        const result = await pool.request().execute(procedureName);
+        const result = await req.execute(procedureName);
         console.log(`[REPORTS] SP executed successfully. Result sets: ${result.recordsets.length}`);
 
         // Map recordsets based on report type

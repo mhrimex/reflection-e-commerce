@@ -1,6 +1,6 @@
 // Coupons API
 export async function fetchCoupons() {
-  const res = await fetch(`${API_BASE}/coupons`);
+  const res = await fetch(`${API_BASE}/coupons?_t=${Date.now()}`);
   if (!res.ok) throw new Error('Failed to fetch coupons');
   const coupons = await res.json();
   return coupons.map(c => ({
@@ -41,7 +41,7 @@ export async function deleteCoupon(id) {
 
 // Brands API
 export async function fetchBrands() {
-  const res = await fetch(`${API_BASE}/brands`);
+  const res = await fetch(`${API_BASE}/brands?_t=${Date.now()}`);
   if (!res.ok) throw new Error('Failed to fetch brands');
   const brands = await res.json();
   return brands.map(b => ({
@@ -80,7 +80,7 @@ export async function deleteBrand(id) {
 
 // Categories API
 export async function fetchCategories() {
-  const res = await fetch(`${API_BASE}/categories`);
+  const res = await fetch(`${API_BASE}/categories?_t=${Date.now()}`);
   if (!res.ok) throw new Error('Failed to fetch categories');
   const categories = await res.json();
   return categories.map(c => ({
@@ -121,7 +121,7 @@ export async function deleteCategory(id) {
 // Inventory API
 export async function fetchInventory() {
   // For now, use products endpoint and map to inventory structure
-  const res = await fetch(`${API_BASE}/products`);
+  const res = await fetch(`${API_BASE}/products?_t=${Date.now()}`);
   if (!res.ok) throw new Error('Failed to fetch inventory');
   const products = await res.json();
   // Assume each product has id, name, and stock fields
@@ -148,7 +148,7 @@ export async function updateInventory(id, stock) {
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 export async function fetchOrders() {
-  const res = await fetch(`${API_BASE}/orders`);
+  const res = await fetch(`${API_BASE}/orders?_t=${Date.now()}`);
   if (!res.ok) throw new Error('Failed to fetch orders');
   const orders = await res.json();
   return orders.map(o => ({
@@ -156,7 +156,21 @@ export async function fetchOrders() {
     userId: o.UserID || o.userId,
     total: o.Total || o.total,
     status: o.Status || o.status,
+    shippingAddress: o.ShippingAddress || o.shippingAddress,
     createdAt: o.CreatedAt || o.createdAt
+  }));
+}
+
+export async function fetchOrderItems(orderId) {
+  const res = await fetch(`${API_BASE}/orders/${orderId}?_t=${Date.now()}`);
+  if (!res.ok) throw new Error('Failed to fetch order items');
+  const items = await res.json();
+  return items.map(i => ({
+    orderItemId: i.OrderItemID || i.orderItemId,
+    productId: i.ProductID || i.productId,
+    name: i.Name || i.name,
+    quantity: i.Quantity || i.quantity,
+    price: i.Price || i.price
   }));
 }
 
@@ -166,7 +180,10 @@ export async function createOrder(order) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(order)
   });
-  if (!res.ok) throw new Error('Failed to create order');
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to create order');
+  }
   return res.json();
 }
 
@@ -191,7 +208,7 @@ export async function deleteOrder(id) {
 
 // Products API
 export async function fetchProducts() {
-  const res = await fetch(`${API_BASE}/products`);
+  const res = await fetch(`${API_BASE}/products?_t=${Date.now()}`);
   if (!res.ok) throw new Error('Failed to fetch products');
   const products = await res.json();
   return products.map(p => ({
@@ -236,7 +253,7 @@ export async function deleteProduct(id) {
 
 // Users API
 export async function fetchUsers() {
-  const res = await fetch(`${API_BASE}/users`);
+  const res = await fetch(`${API_BASE}/users?_t=${Date.now()}`);
   if (!res.ok) throw new Error('Failed to fetch users');
   const users = await res.json();
   return users.map(u => ({
@@ -285,8 +302,15 @@ export async function deleteUser(id) {
   return res.json();
 }
 
-export async function fetchReports(type = 'overview') {
-  const res = await fetch(`${API_BASE}/reports/${type}`);
+export async function fetchReports(type = 'overview', filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.categoryId) params.append('categoryId', filters.categoryId);
+  if (filters.startDate) params.append('startDate', filters.startDate);
+  if (filters.endDate) params.append('endDate', filters.endDate);
+
+  const queryString = params.toString() ? `?${params.toString()}&_t=${Date.now()}` : `?_t=${Date.now()}`;
+  const res = await fetch(`${API_BASE}/reports/${type}${queryString}`);
+
   if (!res.ok) throw new Error('Failed to fetch reports');
   return res.json();
 }

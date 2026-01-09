@@ -1,5 +1,6 @@
 
 
+import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { fetchCart } from '../api';
 
@@ -7,6 +8,7 @@ export default function Cart() {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -50,7 +52,7 @@ export default function Cart() {
               <span className="font-bold text-xl">Total:</span>
               <span className="font-bold text-blue-600 text-2xl">${total.toFixed(2)}</span>
             </div>
-            <button className="btn w-full mt-6">Proceed to Checkout</button>
+            <button onClick={() => navigate('/checkout')} className="btn w-full mt-6 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">Proceed to Checkout</button>
           </>
         )}
       </div>

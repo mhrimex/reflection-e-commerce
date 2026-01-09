@@ -1,0 +1,49 @@
+
+PAUMENTS COLUMNS:
+[
+  {
+    "COLUMN_NAME": "PaymentID",
+    "DATA_TYPE": "int",
+    "IS_NULLABLE": "NO"
+  },
+  {
+    "COLUMN_NAME": "UserID",
+    "DATA_TYPE": "int",
+    "IS_NULLABLE": "YES"
+  },
+  {
+    "COLUMN_NAME": "Amount",
+    "DATA_TYPE": "decimal",
+    "IS_NULLABLE": "NO"
+  },
+  {
+    "COLUMN_NAME": "Method",
+    "DATA_TYPE": "nvarchar",
+    "IS_NULLABLE": "YES"
+  },
+  {
+    "COLUMN_NAME": "PaidAt",
+    "DATA_TYPE": "datetime",
+    "IS_NULLABLE": "YES"
+  }
+]
+
+CREATEORDER SP:
+
+-- 2. Update CreateOrder to accept Address
+CREATE PROCEDURE CreateOrder
+    @UserID INT, 
+    @Total DECIMAL(18,2), 
+    @PaymentID INT = NULL,
+    @Status NVARCHAR(50) = 'Processing',
+    @ShippingAddress NVARCHAR(255) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO Orders (UserID, Total, PaymentID, Status, ShippingAddress) 
+    VALUES (@UserID, @Total, @PaymentID, @Status, @ShippingAddress);
+    
+    SELECT SCOPE_IDENTITY() AS OrderID;
+END
+
+        

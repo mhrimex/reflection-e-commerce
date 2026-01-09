@@ -163,16 +163,33 @@ END
 
 -- ORDERS
 CREATE PROCEDURE CreateOrder
-    @UserID INT, @Total DECIMAL(18,2), @PaymentID INT
+    @UserID INT, 
+    @Total DECIMAL(18,2), 
+    @PaymentID INT = NULL,
+    @Status NVARCHAR(50) = 'Processing'
 AS
 BEGIN
-    INSERT INTO Orders (UserID, Total, PaymentID) VALUES (@UserID, @Total, @PaymentID)
+    INSERT INTO Orders (UserID, Total, PaymentID, Status) 
+    VALUES (@UserID, @Total, @PaymentID, @Status);
+    
+    SELECT SCOPE_IDENTITY() AS OrderID;
 END
 
 CREATE PROCEDURE GetAllOrders
 AS
 BEGIN
     SELECT * FROM Orders
+END
+
+CREATE PROCEDURE AddOrderItem
+    @OrderID INT,
+    @ProductID INT,
+    @Quantity INT,
+    @Price DECIMAL(18,2)
+AS
+BEGIN
+    INSERT INTO OrderItems (OrderID, ProductID, Quantity, Price)
+    VALUES (@OrderID, @ProductID, @Quantity, @Price)
 END
 
 -- CART
@@ -316,6 +333,7 @@ END
 
 -- STOCK REPORT
 CREATE PROCEDURE GetStockReport
+    @CategoryID INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -327,7 +345,8 @@ BEGIN
         SUM(Stock * Price) AS TotalInventoryValue,
         COUNT(CASE WHEN Stock <= 10 THEN 1 END) AS LowStockAlerts
     FROM Products 
-    WHERE IsDeleted = 0;
+    WHERE IsDeleted = 0 
+      AND (@CategoryID IS NULL OR CategoryID = @CategoryID);
 
     -- Full Stock List (Showing all products for "Variation")
     SELECT 
@@ -337,7 +356,8 @@ BEGIN
         Price, 
         (Stock * Price) AS PositionValue
     FROM Products 
-    WHERE IsDeleted = 0
+    WHERE IsDeleted = 0 
+      AND (@CategoryID IS NULL OR CategoryID = @CategoryID)
     ORDER BY Stock ASC;
 
     -- Stock By Category
@@ -347,15 +367,23 @@ BEGIN
         SUM(p.Stock * p.Price) AS CategoryValue
     FROM Products p
     JOIN Categories c ON p.CategoryID = c.CategoryID
-    WHERE p.IsDeleted = 0
+    WHERE p.IsDeleted = 0 
+      AND (@CategoryID IS NULL OR p.CategoryID = @CategoryID)
     GROUP BY c.Name;
 END
 
 -- SALES PERFORMANCE REPORT
 CREATE PROCEDURE GetSalesReport
+    @StartDate DATE = NULL,
+    @EndDate DATE = NULL,
+    @CategoryID INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
+
+    -- Default Date Range: Last 30 Days if NULL
+    IF @StartDate IS NULL SET @StartDate = DATEADD(day, -30, GETDATE());
+    IF @EndDate IS NULL SET @EndDate = GETDATE();
 
     -- Top Selling Products
     SELECT TOP 10
@@ -364,6 +392,9 @@ BEGIN
         SUM(oi.Quantity * oi.Price) AS TotalRevenue
     FROM OrderItems oi
     INNER JOIN Products p ON oi.ProductID = p.ProductID
+    INNER JOIN Orders o ON oi.OrderID = o.OrderID
+    WHERE o.CreatedAt BETWEEN @StartDate AND DATEADD(day, 1, @EndDate)
+      AND (@CategoryID IS NULL OR p.CategoryID = @CategoryID)
     GROUP BY p.Name
     ORDER BY TotalRevenue DESC;
 
@@ -374,16 +405,22 @@ BEGIN
     FROM OrderItems oi
     INNER JOIN Products p ON oi.ProductID = p.ProductID
     INNER JOIN Categories c ON p.CategoryID = c.CategoryID
+    INNER JOIN Orders o ON oi.OrderID = o.OrderID
+    WHERE o.CreatedAt BETWEEN @StartDate AND DATEADD(day, 1, @EndDate)
+      AND (@CategoryID IS NULL OR p.CategoryID = @CategoryID)
     GROUP BY c.Name
     ORDER BY Revenue DESC;
 
-    -- Revenue Growth (Last 7 Days)
+    -- Revenue Growth (Filtered Range)
     SELECT 
         CAST(CreatedAt AS DATE) AS SalesDate,
         SUM(Total) AS DailyRevenue,
         COUNT(*) AS OrderCount
     FROM Orders
-    WHERE CreatedAt >= DATEADD(day, -7, GETDATE())
+    WHERE CreatedAt BETWEEN @StartDate AND DATEADD(day, 1, @EndDate)
+      -- Note: Orders table doesn't have CategoryID directly, so we can't filter daily trend by category easily without joining items.
+      -- To keep it simple and performant, we'll skip category filter for the daily trend line or accept it shows global trend.
+      -- For now, let's keep it global or join if strictness is required. Let's keep global for trend line context.
     GROUP BY CAST(CreatedAt AS DATE)
     ORDER BY SalesDate ASC;
 END

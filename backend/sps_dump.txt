@@ -1,0 +1,62 @@
+--- DeleteOrder ---
+
+        CREATE PROCEDURE DeleteOrder
+            @OrderID INT
+        AS
+        BEGIN
+            SET NOCOUNT ON;
+            DELETE FROM OrderItems WHERE OrderID = @OrderID;
+            DELETE FROM Orders WHERE OrderID = @OrderID;
+        END
+        
+
+--- UpdateOrder ---
+
+-- 3. Update UpdateOrder to accept Address
+CREATE PROCEDURE UpdateOrder
+    @OrderID INT,
+    @Total DECIMAL(18,2), 
+    @Status NVARCHAR(50),  
+    @PaymentID INT = NULL,
+    @ShippingAddress NVARCHAR(255) = NULL
+AS
+BEGIN
+    UPDATE Orders 
+    SET Total = @Total, 
+        Status = @Status,
+        PaymentID = ISNULL(@PaymentID, PaymentID),
+        ShippingAddress = @ShippingAddress
+    WHERE OrderID = @OrderID;
+END
+
+
+--- GetOrderItems ---
+
+        CREATE PROCEDURE GetOrderItems
+            @OrderID INT
+        AS
+        BEGIN
+            SET NOCOUNT ON;
+            SELECT 
+                oi.OrderItemID,
+                oi.ProductID,
+                p.Name,
+                oi.Quantity,
+                oi.Price
+            FROM OrderItems oi
+            LEFT JOIN Products p ON oi.ProductID = p.ProductID 
+            WHERE oi.OrderID = @OrderID;
+        END
+        
+
+--- ClearOrderItems ---
+
+-- 4. Helper to Clear Order Items (for full update)
+CREATE PROCEDURE ClearOrderItems
+    @OrderID INT
+AS
+BEGIN
+    DELETE FROM OrderItems WHERE OrderID = @OrderID;
+END
+
+
